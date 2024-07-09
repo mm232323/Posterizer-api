@@ -1,5 +1,5 @@
 {
-  "name": "high-post-backend",
+  "name": "posterizer-backend",
   "version": "1.0.0",
   "description": "high post backend and apies with mongodb",
   "main": "app.js",
