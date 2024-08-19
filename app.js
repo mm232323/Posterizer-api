@@ -8,15 +8,9 @@ const db = require("./util/db/database");
 const cors = require("cors");
 
 app.use(cors());
-app.use(
-  bodyparser.urlencoded({
-    extended: true,
-    parameterLimit: 1000000,
-    limit: "1500mb",
-  })
-);
-
 app.use(express.json());
+
+app.use(express.static("public"));
 
 const main = async () => {
   try {

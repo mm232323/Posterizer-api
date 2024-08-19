@@ -36,7 +36,6 @@ router.post("/signup/create-session", async (req, res, next) => {
 
 router.post("/login/check-user", async (req, res, next) => {
   const user = req.body;
-  console.log(user);
   let result = await usersCollection.findOne({
     email: user.email,
     password: user.password,
@@ -47,8 +46,9 @@ router.post("/login/check-user", async (req, res, next) => {
 router.get("/login/create-session/:id", async (req, res, next) => {
   const id = req.params.id;
   const findSession = await sessionsCollection.findOne({ id: id });
+  console.log(findSession);
   if (findSession)
-    res.json(JSON.stringify({ message: "session is alraedy created" }));
+    return res.json(JSON.stringify({ message: "session is alraedy created" }));
   const findunAuthed = await unAuthedCollection.findOne({ id: id });
   sessionsCollection.insertOne(findunAuthed);
   await unAuthedCollection.deleteOne({ id: id });

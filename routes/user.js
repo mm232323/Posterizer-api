@@ -12,27 +12,71 @@ const usersCollection = db.client.db("posterizer").collection("users");
 
 const sessionsCollection = db.client.db("posterizer").collection("sessions");
 
+const postsCounter = new Map();
 const notificationsCounter = new Map();
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../public/uploads"));
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
 const upload = multer({
-  storage: storage,
+  storage,
   limits: {
     fileSize: 20 * 1024 * 1024,
   },
 });
 
+const storage2 = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../public/avatars"));
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+const upload2 = multer({
+  storage: storage2,
+  limits: {
+    fileSize: 20 * 1024 * 1024,
+  },
+});
+
+router.get("/user/posts", async (req, res, next) => {
+  let posts = await usersCollection.find({ gender: "on" }).toArray();
+  posts = posts.map((user) => user.posts).filter((post) => post.length);
+  if (posts.length < 2) posts = posts[0];
+  else posts = posts.reduce((acc, current) => acc.concat(current));
+  function shuffle(arr) {
+    let shuffledArray = arr.slice();
+
+    for (let i = shuffledArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledArray[i], shuffledArray[j]] = [
+        shuffledArray[j],
+        shuffledArray[i],
+      ];
+    }
+    return shuffledArray;
+  }
+  posts = shuffle(posts);
+  return res.json({ posts });
+});
+
 router.get("/user/:Id", async (req, res, next) => {
   const id = req.params.Id;
   const selectedSession = await sessionsCollection.findOne({ id: id });
-  if (!selectedSession) return res.json({ message: "not found" });
+  if (!selectedSession)
+    return res.json(JSON.stringify({ message: "not here" }));
   const selectedUser = await usersCollection.findOne({
     email: selectedSession["email"],
     password: selectedSession["password"],
   });
-  res.json(selectedUser);
+  return res.json(selectedUser);
 });
-
 router.post("/user/following", async (req, res, next) => {
   const followerUser = req.body.followerId;
 
@@ -63,7 +107,7 @@ router.post("/user/following", async (req, res, next) => {
       },
       { $push: { followers: followerUser } }
     );
-    res.json(
+    return res.json(
       JSON.stringify({
         message: `you followed ${selectedFollowedSession["name"]}`,
       })
@@ -92,7 +136,7 @@ router.post("/user/following", async (req, res, next) => {
       },
       { $push: { followers: id } }
     );
-    res.json(
+    return res.json(
       JSON.stringify({
         message: `you followed ${selectedFollowedSession["name"]}`,
       })
@@ -109,17 +153,20 @@ router.get("/user/get/:id", async (req, res, next) => {
     email: selectedSession["email"],
     password: selectedSession["password"],
   });
-  res.status(200).json(JSON.stringify(selectedUser));
+  return res.status(200).json(JSON.stringify(selectedUser));
 });
 
 router.post("/user/post", async (req, res, next) => {
   let post = req.body;
-  const img = post.img;
   const userId = post.id;
   if (notificationsCounter.has(userId))
     notificationsCounter.set(userId, notificationsCounter.get(userId) + 1);
   else notificationsCounter.set(userId, 1);
+  if (postsCounter.has(userId))
+    postsCounter.set(userId, postsCounter.get(userId) + 1);
+  else postsCounter.set(userId, 1);
   let notId = notificationsCounter.get(userId);
+  let postId = postsCounter.get(userId);
   const selectedSession = await sessionsCollection.findOne({
     id: userId,
   });
@@ -128,35 +175,100 @@ router.post("/user/post", async (req, res, next) => {
     password: selectedSession["password"],
   });
   const avatar = selectedUser["avatar"];
-  post = { ...post, avatar };
-  await usersCollection.updateOne(
-    {
-      email: selectedSession["email"],
-      password: selectedSession["password"],
-    },
-    { $push: { posts: post, nots: { ...post, id: notId } } }
-  );
+  post = { ...post, avatar, postId };
+  selectedUser.posts.push(post);
+  selectedUser.nots.myNots.push({ ...post, id: notId });
+  await usersCollection.deleteOne({
+    email: selectedSession["email"],
+    password: selectedSession["password"],
+  });
+  await usersCollection.insertOne(selectedUser);
   const followers = selectedUser["followers"];
-  res.json(JSON.stringify({ message: "the post sent" }));
+  for (let follower of followers) {
+    const selectedFollowerSession = await sessionsCollection.findOne({
+      id: follower,
+    });
+    const selectedFollowerUser = await usersCollection.findOne({
+      email: selectedFollowerSession.email,
+      password: selectedFollowerSession.password,
+    });
+    selectedFollowerUser.nots.followedNots.push(post);
+    await usersCollection.deleteOne({
+      email: selectedFollowerSession.email,
+      password: selectedFollowerSession.password,
+    });
+    await usersCollection.insertOne(selectedFollowerUser);
+  }
+  return res.json(JSON.stringify({ message: "the post sent" }));
 });
+
+router.post(
+  "/user/poster/:Id",
+  upload.single("image"),
+  async (req, res, next) => {
+    const id = req.params.Id;
+    const img = req.file;
+    const selectedSession = await sessionsCollection.findOne({ id });
+    const selectedUser = await usersCollection.findOne({
+      email: selectedSession.email,
+      password: selectedSession.password,
+    });
+    const posts = selectedUser.posts;
+    posts[posts.length - 1].img = img;
+    await usersCollection.deleteOne({
+      email: selectedSession.email,
+      password: selectedSession.password,
+    });
+    await usersCollection.insertOne(selectedUser);
+    return res.json(
+      JSON.stringify({ message: "post photo added successfully" })
+    );
+  }
+);
+
 router.post(
   "/user/add-avatar/:Id",
-  upload.single("image"),
+  upload2.single("image"),
   async (req, res, next) => {
     const avatar = req.file;
     const id = req.params.Id;
     const selectedSession = await sessionsCollection.findOne({ id });
-    console.log(selectedSession);
-    await usersCollection.updateOne(
-      { email: selectedSession.email, password: selectedSession.password },
-      { avatar }
-    );
-    res.json(JSON.stringify({ message: "the avatar changed" }));
+    const selectedUser = await usersCollection.findOne({
+      email: selectedSession.email,
+      password: selectedSession.password,
+    });
+    selectedUser.avatar = avatar;
+    selectedUser.avatarName = avatar.originalname;
+    await usersCollection.deleteOne({
+      email: selectedSession.email,
+      password: selectedSession.password,
+    });
+    await usersCollection.insertOne(selectedUser);
+    return res.json(JSON.stringify({ message: "the avatar changed" }));
   }
 );
+router.get("/user/avatar/:Id", async (req, res, next) => {
+  const id = req.params.Id;
+  const selectedSession = await sessionsCollection.findOne({ id });
+  const selectedUser = await usersCollection.findOne({
+    email: selectedSession.email,
+    password: selectedSession.password,
+  });
+  return res.json(JSON.stringify({ avatar: selectedUser.avatarName }));
+});
+router.get("/user/notifications/:Id", async (req, res, next) => {
+  const id = req.params.Id;
+  const selectedSession = await sessionsCollection.findOne({ id });
+  const selectedUser = await usersCollection.findOne({
+    email: selectedSession.email,
+    password: selectedSession.password,
+  });
+  return res.json(JSON.stringify(selectedUser.nots));
+});
 router.post("/user/delete-notification/:Id", async (req, res, next) => {
   const id = req.params.Id;
   const notId = req.body.id;
+  const notType = req.body.type;
   notificationsCounter.set(id, notificationsCounter.get(id) - 1);
   const selectedSession = await sessionsCollection.findOne({ id });
   const selectedUser = await usersCollection.findOne({
@@ -167,10 +279,18 @@ router.post("/user/delete-notification/:Id", async (req, res, next) => {
     email: selectedSession["email"],
     password: selectedSession["password"],
   });
-  selectedUser.nots = selectedUser.nots.filter((not) => notId !== not.id);
+  if (notType == "me") {
+    selectedUser.nots.myNots = selectedUser.nots.myNots.filter(
+      (not) => notId !== not.id
+    );
+  } else
+    selectedUser.nots.followedNots = selectedUser.nots.followedNots.filter(
+      (not) => notId !== not.id
+    );
   await usersCollection.insertOne(selectedUser);
-  res.json(
+  return res.json(
     JSON.stringify({ message: "The notification deleted successfully" })
   );
 });
+
 module.exports = router;
