@@ -51,6 +51,7 @@ router.get("/user/posts", async (req, res, next) => {
   if (posts.length < 2) posts = posts[0];
   else posts = posts.reduce((acc, current) => acc.concat(current));
   function shuffle(arr) {
+    if (!arr) return [];
     let shuffledArray = arr.slice();
 
     for (let i = shuffledArray.length - 1; i > 0; i--) {
@@ -292,5 +293,67 @@ router.post("/user/delete-notification/:Id", async (req, res, next) => {
     JSON.stringify({ message: "The notification deleted successfully" })
   );
 });
-
+router.post("/user/like-post", async (req, res, next) => {
+  const { userId, likerId, postId } = req.body;
+  if (userId == likerId)
+    return res.json({ message: "you can't like your posts" });
+  const selectedLikerSession = await sessionsCollection.findOne({
+    id: String(likerId),
+  });
+  const selectedUserSession = await sessionsCollection.findOne({
+    id: String(userId),
+  });
+  const filter1 = {
+    email: selectedLikerSession["email"],
+    password: selectedLikerSession["password"],
+  };
+  const filter2 = {
+    email: selectedUserSession["email"],
+    password: selectedUserSession["password"],
+  };
+  const selectedLikerUser = await usersCollection.findOne(filter1);
+  const selectedUserUser = await usersCollection.findOne(filter2);
+  const foundedLike = selectedLikerUser.likes.filter(
+    (like) => like.user == userId && like.postId == postId
+  );
+  if (foundedLike.length !== 0) {
+    await usersCollection.deleteOne(filter1);
+    selectedLikerUser.likes = selectedLikerUser.likes.filter(
+      (like) => like.user !== userId || like.postId !== postId
+    );
+    await usersCollection.insertOne(selectedLikerUser);
+    await usersCollection.deleteOne(filter2);
+    selectedUserUser.posts = selectedUserUser.posts.map((post) =>
+      post.postId === postId ? { ...post, reactions: post.reactions - 1 } : post
+    );
+    await usersCollection.insertOne(selectedUserUser);
+  } else {
+    console.log(foundedLike);
+    await usersCollection.updateOne(filter1, {
+      $push: { likes: { user: userId, postId } },
+    });
+    await usersCollection.deleteOne(filter2);
+    selectedUserUser.posts = selectedUserUser.posts.map((post) =>
+      post.postId === postId ? { ...post, reactions: post.reactions + 1 } : post
+    );
+    await usersCollection.insertOne(selectedUserUser);
+  }
+  res.json({ message: "post likes managed" });
+});
+router.post("/user/add-comment", async (req, res, next) => {
+  const data = req.body;
+  const selectedSession = await sessionsCollection.findOne({ id: data.user });
+  const filter = {
+    email: selectedSession.email,
+    password: selectedSession.password,
+  };
+  const selectedUser = await usersCollection.findOne(filter);
+  selectedUser.posts[+data.postId - 1].comments.push({
+    comment: data.comment,
+    commenter: data.commenter,
+  });
+  await usersCollection.deleteOne(filter);
+  await usersCollection.insertOne(selectedUser);
+  res.json({ message: "the comment sent seccessfully" });
+});
 module.exports = router;
