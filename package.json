@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node app.js",
     "start": "nodemon app.js",
-    "build": "npm install;nodemon app.js"
+    "build": "npm install"
   },
   "author": "Mohammed Qurany Ibrahim",
   "license": "ISC",
