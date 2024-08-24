@@ -17,6 +17,7 @@ router.post("/contact/add-message", (req, res, next) => {
 
 router.post("/signup/create-user", async (req, res, next) => {
   const user = req.body;
+  console.log(user);
   usersCollection.insertOne(user);
   res.status(200).json(JSON.stringify({ message: "THE USER CREATED" }));
 });
