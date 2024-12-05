@@ -241,7 +241,7 @@ exports.postComment = async (req, res, next) => {
     email: selectedUser.email,
     password: selectedUser.password,
   };
-  selectedUser.posts[+data.postId].comments.push({
+  selectedUser.posts[+data.postIdcls].comments.push({
     comment: data.comment,
     commenter: data.commenter,
   });

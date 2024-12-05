@@ -4,8 +4,8 @@
   "description": "high post backend and apies with mongodb",
   "main": "app.js",
   "scripts": {
-    "test": "node app.js",
-    "start": "nodemon app.js",
+    "test": "nodemon app.js",
+    "start": "node app.js",
     "build": "npm install"
   },
   "author": "Mohammed Qurany Ibrahim",

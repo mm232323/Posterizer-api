@@ -4,7 +4,7 @@ const client = new MongoClient(uri);
 const connectToDB = async () => {
   try {
     await client.connect();
-    console.log(`Connected to posterizer database 🏦`);
+    console.log(`Connected to Posterizer database 🏦`);
   } catch (err) {
     console.log("Error occured when connecting to DB: " + err);
   }
