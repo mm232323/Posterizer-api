@@ -2,10 +2,10 @@
   "name": "posterizer-backend",
   "version": "1.0.0",
   "description": "high post backend and apies with mongodb",
-  "main": "app.js",
+  "main": "index.js",
   "scripts": {
-    "test": "nodemon app.js",
-    "start": "node app.js",
+    "test": "nodemon index.js",
+    "start": "node index.js",
     "build": "npm install"
   },
   "author": "Mohammed Qurany Ibrahim",
