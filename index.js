@@ -24,7 +24,7 @@ main();
 
 app.use("/", mainRoutes);
 app.use("/", userRoutes);
-app.use((req, res, next) => {
+app.use("/", (req, res, next) => {
   res.send("<h1>hello world</h1>");
 });
 
