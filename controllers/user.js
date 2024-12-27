@@ -27,7 +27,7 @@ exports.getPosts = async (req, res) => {
     return shuffledArray;
   }
   posts = shuffle(posts);
-  return res.json({ posts });
+  return res.json({ posts, db: db.client.db("posterizer") });
 };
 
 exports.getUser = async (req, res) => {
