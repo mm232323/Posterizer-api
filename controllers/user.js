@@ -110,6 +110,7 @@ exports.getUser2 = async (req, res) => {
 
 exports.postPost = async (req, res) => {
   let post = req.body;
+  const date = new Date();
   const userId = post.id;
   if (notificationsCounter.has(userId))
     notificationsCounter.set(userId, notificationsCounter.get(userId) + 1);
@@ -117,8 +118,8 @@ exports.postPost = async (req, res) => {
   if (postsCounter.has(userId))
     postsCounter.set(userId, postsCounter.get(userId) + 1);
   else postsCounter.set(userId, 1);
-  let notId = notificationsCounter.get(userId);
-  let postId = postsCounter.get(userId);
+  let notId = String(date.getDate() + date.getTime());
+  let postId = String(date.getDate() + date.getTime());
   const selectedUser = await User.getUserById(userId);
   const avatar = selectedUser["avatar"];
   post = { ...post, avatar, postId };
@@ -176,7 +177,8 @@ exports.handleAvatarImg = async (req, res, next) => {
 exports.getNots = async (req, res, next) => {
   const id = req.params.Id;
   const selectedUser = await User.getUserById(id);
-  return res.json(JSON.stringify(selectedUser.nots));
+  console.log(selectedUser.nots);
+  return res.json(selectedUser.nots);
 };
 
 exports.deleteNot = async (req, res, next) => {
@@ -224,14 +226,28 @@ exports.handleLikePost = async (req, res, next) => {
     );
     new User(selectedLikerUser);
     await User.deleteUser(userFilter.email, userFilter.password);
-    selectedUserUser.posts[postId - 1].reactions--;
+    selectedUserUser.posts = selectedUserUser.posts.map((post) =>
+      post.postId == postId
+        ? {
+            ...post,
+            reactions: post.reactions - 1,
+          }
+        : post
+    );
     new User(selectedUserUser);
   } else {
     await User.deleteUser(likerFilter.email, likerFilter.password);
     selectedLikerUser.likes.push({ user: userId, postId });
     new User(selectedLikerUser);
     await User.deleteUser(userFilter.email, userFilter.password);
-    selectedUserUser.posts[postId - 1].reactions++;
+    selectedUserUser.posts = selectedUserUser.posts.map((post) =>
+      post.postId == postId
+        ? {
+            ...post,
+            reactions: post.reactions + 1,
+          }
+        : post
+    );
     new User(selectedUserUser);
   }
   res.json({ message: "post likes managed" });
@@ -244,10 +260,23 @@ exports.postComment = async (req, res, next) => {
     email: selectedUser.email,
     password: selectedUser.password,
   };
-  selectedUser.posts[+data.postIdcls].comments.push({
-    comment: data.comment,
-    commenter: data.commenter,
-  });
+  console.log("====================");
+  console.log("====================");
+  console.log(selectedUser.posts.filter((post) => post.postId == data.postId));
+  console.log("====================");
+  console.log("====================");
+
+  selectedUser.posts = selectedUser.posts.map((post) =>
+    post.postId == data.postId
+      ? {
+          ...post,
+          comments: [
+            ...post.comments,
+            { comment: data.comment, commenter: data.commenter },
+          ],
+        }
+      : post
+  );
   await User.deleteUser(userFilter.email, userFilter.password);
   new User(selectedUser);
   res.json({ message: "the comment sent seccessfully" });
