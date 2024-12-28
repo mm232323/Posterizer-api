@@ -6,7 +6,7 @@ const messagesCollection = db.client.db("posterizer").collection("messages");
 const unAuthedCollection = db.client.db("posterizer").collection("unauthed");
 const User = require("../models/User");
 const Session = require("../models/Session");
-exports.postMessage = (req, res, next) => {
+exports.postMessage = async (req, res, next) => {
   const message = req.body;
   messagesCollection.insertOne(message);
   res.json({ message: "THE MESSAGE ADDED" });
