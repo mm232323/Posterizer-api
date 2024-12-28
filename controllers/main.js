@@ -8,6 +8,7 @@ const User = require("../models/User");
 const Session = require("../models/Session");
 exports.postMessage = async (req, res, next) => {
   const message = req.body;
+  console.log(message);
   messagesCollection.insertOne(message);
   res.json({ message: "THE MESSAGE ADDED" });
 };
