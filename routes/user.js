@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, "../public/uploads"));
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    cb(null, new Date().getTime() + file.originalname);
   },
 });
 
@@ -29,7 +29,7 @@ const storage2 = multer.diskStorage({
     cb(null, path.join(__dirname, "../public/avatars"));
   },
   filename: (req, file, cb) => {
-    cb(null, file.originalname);
+    cb(null, new Date().getTime() + file.originalname);
   },
 });
 

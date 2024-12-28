@@ -28,6 +28,7 @@ exports.SinginCheckUser = async (req, res, next) => {
 
 exports.createSigninSession = async (req, res, next) => {
   const session = req.body;
+  console.log(session);
   new Session(session);
   res.status(200).json(JSON.stringify({ message: "session is created" }));
 };
@@ -56,7 +57,8 @@ exports.createLoginSession = async (req, res, next) => {
 
 exports.logOut = async (req, res, next) => {
   const id = req.params.id;
-  const selectedSession = Session.get(id);
+  const selectedSession = await Session.get(id);
+  console.log(selectedSession);
   unAuthedCollection.insertOne(selectedSession);
   const deleteMessage = await Session.deleteSession(id);
   res.json(JSON.stringify({ message: "signed out successfuly" }));

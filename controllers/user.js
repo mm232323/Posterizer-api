@@ -147,7 +147,10 @@ exports.handlePostImg = async (req, res, next) => {
   const img = req.file;
   const selectedUser = await User.getUserById(id);
   const posts = selectedUser.posts;
-  if (img.originalname !== "undefined") posts[posts.length - 1].img = img;
+  if (img.filename !== "undefined") {
+    posts[posts.length - 1].img = img;
+    posts[posts.length - 1].imgName = img.filename;
+  }
   await User.deleteUser(selectedUser.email, selectedUser.password);
   new User(selectedUser);
   return res.json(JSON.stringify({ message: "post photo added successfully" }));
@@ -158,7 +161,7 @@ exports.postAvatar = async (req, res, next) => {
   const id = req.params.Id;
   const selectedUser = await User.getUserById(id);
   selectedUser.avatar = avatar;
-  selectedUser.avatarName = avatar.originalname;
+  selectedUser.avatarName = avatar.filename;
   await User.deleteUser(selectedUser.email, selectedUser.password);
   new User(selectedUser);
   return res.json(JSON.stringify({ message: "the avatar changed" }));
